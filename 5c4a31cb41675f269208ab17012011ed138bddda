@@ -1,2 +1,14 @@
 [ver:1,total:240]
 .circleci/config.yml:240,1524690000:240,m
+
+[ver:1,total:120]
+.circleci/config.yml:120,1524690000:120,m
+
+[ver:1,total:60]
+.circleci/config.yml:60,1524690000:60,m
+
+[ver:1,total:60]
+.circleci/config.yml:60,1524690000:60,m
+
+[ver:1,total:180]
+.circleci/config.yml:180,1524690000:180,r
