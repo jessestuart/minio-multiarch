@@ -6,10 +6,12 @@ workflows:
     jobs:
       - build-armhf
       - build-arm64
+      # - build-amd64
   nightly:
     jobs:
       - build-armhf
       - build-arm64
+      # - build-amd64
     triggers:
       - schedule:
           cron: "0 0 * * *"
@@ -68,9 +70,9 @@ shared: &shared
           docker build -t ${IMAGE_ID} --build-arg target=$TARGET --build-arg arch=$QEMU_ARCH .;
           echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
           docker push ${IMAGE_ID};
-
           docker tag  "${IMAGE_ID}" "${REGISTRY}/${IMAGE}:latest-${TAG}";
           docker push               "${REGISTRY}/${IMAGE}:latest-${TAG}";
+
     - run:
         name: Push Docker manifest.
         command: |
@@ -86,6 +88,19 @@ shared: &shared
 
 
 jobs:
+  build-amd64:
+    <<: *shared
+    environment:
+      GITHUB_REPO: minio/minio
+      GOARCH: amd64
+      GOPATH: /home/circleci/go
+      GOROOT: /usr/local/go
+      IMAGE: minio
+      QEMU_ARCH: amd64
+      QEMU_VERSION: v2.11.0
+      REGISTRY: jessestuart
+      TAG: amd64
+      TARGET: amd64
   build-arm64:
     <<: *shared
     environment:
