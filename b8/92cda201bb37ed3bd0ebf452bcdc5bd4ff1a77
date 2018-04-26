@@ -344,3 +344,17 @@ Dockerfile:60,1524772800:60,m
 
 [ver:1,total:120]
 .circleci/config.yml:120,1524776400:120,m
+
+[ver:1,total:420]
+.circleci/config.yml:210,1524776400:210,m
+.git/rebase-merge/git-rebase-todo:180,1524776400:180,d
+Dockerfile:30,1524776400:30,r
+
+[ver:1,total:120]
+.circleci/config.yml:120,1524776400:120,m
+
+[ver:1,total:60]
+.git/COMMIT_EDITMSG:60,1524776400:60,r
+
+[ver:1,total:120]
+.circleci/config.yml:120,1524776400:120,m
