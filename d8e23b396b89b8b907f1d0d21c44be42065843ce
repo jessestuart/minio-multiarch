@@ -1,2 +1,10 @@
 [ver:1,total:60]
 .circleci/config.yml:60,1524765600:60,m
+
+[ver:1,total:360]
+.circleci/config.yml:300,1524765600:300,m
+Dockerfile:60,1524765600:60,r
+
+[ver:1,total:180]
+.circleci/config.yml:160,1524762000:160,m
+Dockerfile:20,1524762000:20,r
