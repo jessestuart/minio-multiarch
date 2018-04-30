@@ -2,15 +2,23 @@ version: 2.0
 
 workflows:
   version: 2
-  build:
+  commit:
     jobs:
       - build-armhf
       - build-arm64
+      - push-manifest:
+          requires:
+            - build-armhf
+            - build-arm64
       # - build-amd64
   nightly:
     jobs:
       - build-armhf
       - build-arm64
+      - push-manifest:
+          requires:
+            - build-armhf
+            - build-arm64
       # - build-amd64
     triggers:
       - schedule:
@@ -73,32 +81,18 @@ shared: &shared
           docker tag  "${IMAGE_ID}" "${REGISTRY}/${IMAGE}:latest-${TAG}";
           docker push               "${REGISTRY}/${IMAGE}:latest-${TAG}";
 
-    - run:
-        name: Push Docker manifest.
-        command: |
-          echo "Downloading manifest-tool"
-          wget https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64
-          mv manifest-tool-linux-amd64 manifest-tool
-          chmod +x manifest-tool
-          ./manifest-tool --version
-          echo "Pushing manifest "$REGISTRY/$IMAGE":latest"
-          echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
-          ./manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:latest"
-          ./manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:$VERSION"
-
 
 jobs:
   build-amd64:
     <<: *shared
     environment:
+      # TODO (Consolidate these)
       GITHUB_REPO: minio/minio
-      GOARCH: amd64
       GOPATH: /home/circleci/go
       GOROOT: /usr/local/go
       IMAGE: minio
-      QEMU_ARCH: amd64
-      QEMU_VERSION: v2.11.0
       REGISTRY: jessestuart
+      GOARCH: amd64
       TAG: amd64
       TARGET: amd64
   build-arm64:
@@ -127,3 +121,42 @@ jobs:
       REGISTRY: jessestuart
       TAG: arm
       TARGET: arm32v6
+  push-manifest:
+    docker:
+      - image: docker:18
+    environment:
+      GITHUB_REPO: minio/minio
+      IMAGE: minio
+      REGISTRY: jessestuart
+    steps:
+      - setup_remote_docker
+
+      - run:
+          name: Determine repo version. Again.
+          command: |
+            apk update && apk add curl jq
+            curl -s https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
+
+      - run:
+          name: Install manifest-tool.
+          command: |
+            export VERSION=$(cat ~/VERSION)
+            echo "Downloading manifest-tool."
+            wget https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64
+            mv manifest-tool-linux-amd64 /usr/bin/manifest-tool
+            chmod +x /usr/bin/manifest-tool
+            manifest-tool --version
+
+      - run:
+          name: Push Docker manifest.
+          command: |
+            export VERSION=$(cat ~/VERSION)
+            echo "Pushing manifest "$REGISTRY/$IMAGE":latest"
+            echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
+            manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:latest"
+            manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:$VERSION"
+      - run:
+          name: Verify manifest was persisted remotely.
+          command: |
+            export VERSION=$(cat ~/VERSION)
+            manifest-tool inspect "$REGISTRY/$IMAGE:$VERSION"
