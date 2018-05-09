@@ -1,25 +1,22 @@
 version: 2.0
 
+build_jobs: &build_jobs
+  jobs:
+    - build-amd64
+    - build-arm64
+    - build-armhf
+    - push-manifest:
+        requires:
+          - build-amd64
+          - build-arm64
+          - build-armhf
+
 workflows:
   version: 2
   commit:
-    jobs:
-      - build-armhf
-      - build-arm64
-      - push-manifest:
-          requires:
-            - build-armhf
-            - build-arm64
-      # - build-amd64
+    <<: *build_jobs
   nightly:
-    jobs:
-      - build-armhf
-      - build-arm64
-      - push-manifest:
-          requires:
-            - build-armhf
-            - build-arm64
-      # - build-amd64
+    <<: *build_jobs
     triggers:
       - schedule:
           cron: "0 0 * * *"
@@ -27,6 +24,7 @@ workflows:
             branches:
               only:
                 - master
+
 
 shared: &shared
   machine: true
@@ -49,8 +47,7 @@ shared: &shared
         name: Update Go version.
         command: |
           sudo rm -rf /usr/local/go
-          curl -O https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz
-          tar xzf go1.10.1.linux-amd64.tar.gz
+          curl -sL https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz | tar xz
           sudo mv go/ /usr/local
           go env && go version
 
