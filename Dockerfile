@@ -37,7 +37,6 @@ ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 HEALTHCHECK --interval=30s --timeout=5s \
     CMD /usr/bin/healthcheck.sh
 
-VOLUME ["/config"]
-VOLUME ["/export"]
+VOLUME ["/data"]
 
 CMD ["minio"]
