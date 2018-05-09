@@ -1,5 +1,4 @@
-ARG target
-FROM $target/alpine
+FROM golang:1.10.1-alpine3.7
 
 ARG arch
 ENV ARCH=$arch
@@ -17,18 +16,24 @@ ENV MINIO_ACCESS_KEY_FILE=access_key \
 
 WORKDIR /go/src/github.com/minio/
 
-COPY minio \
-     dockerscripts/docker-entrypoint.sh \
-     dockerscripts/healthcheck.sh \
-     /usr/bin/
+COPY dockerscripts/docker-entrypoint.sh dockerscripts/healthcheck.sh /usr/bin/
+COPY . /go/src/github.com/minio/minio
 
-RUN \
-     apk add --no-cache ca-certificates && \
-     apk add --no-cache --virtual .build-deps curl && \
+RUN  \
+     apk add --no-cache ca-certificates curl && \
+     apk add --no-cache --virtual .build-deps git && \
      echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
-     chmod +x /usr/bin/minio  && \
-     chmod +x /usr/bin/docker-entrypoint.sh && \
-     chmod +x /usr/bin/healthcheck.sh
+     cd /go/src/github.com/minio/minio && \
+     go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
+     rm -rf /go/pkg /go/src /usr/local/go && apk del .build-deps
+
+# RUN \
+#      apk add --no-cache ca-certificates && \
+#      apk add --no-cache --virtual .build-deps curl && \
+#      echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
+#      chmod +x /usr/bin/minio  && \
+#      chmod +x /usr/bin/docker-entrypoint.sh && \
+#      chmod +x /usr/bin/healthcheck.sh
 
 EXPOSE 9000
 
