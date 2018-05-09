@@ -68,12 +68,18 @@ shared: &shared
           cd $GOPATH/src/github.com/${GITHUB_REPO}
           # ============
           # <qemu-support>
-          curl -sL "https://github.com/multiarch/qemu-user-static/releases/download/${QEMU_VERSION}/qemu-${QEMU_ARCH}-static.tar.gz" | tar xz
-          docker run --rm --privileged multiarch/qemu-user-static:register
+          if [ $GOARCH == 'amd64' ]; then
+            touch qemu-amd64-static
+          else
+            echo "Loading qemu libs for multi-arch support."
+            curl -sL https://github.com/multiarch/qemu-user-static/releases/download/${QEMU_VERSION}/qemu-${QEMU_ARCH}-static.tar.gz | tar xz
+            docker run --rm --privileged multiarch/qemu-user-static:register
+          fi
           # </qemu-support>
           # ============
 
           # Replace the repo's Dockerfile with our own.
+          ls -alh
           cp -f $DIR/Dockerfile .
           docker build -t ${IMAGE_ID} --build-arg target=$TARGET --build-arg arch=$QEMU_ARCH .
           # Login to Docker Hub.
@@ -97,6 +103,7 @@ jobs:
       REGISTRY: jessestuart
       GOARCH: amd64
       TAG: amd64
+      QEMU_ARCH: amd64
       TARGET: amd64
   build-arm64:
     <<: *shared
