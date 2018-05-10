@@ -1,25 +1,22 @@
 version: 2.0
 
+build_jobs: &build_jobs
+  jobs:
+    - build-amd64
+    - build-arm64
+    - build-armhf
+    - push-manifest:
+        requires:
+          - build-amd64
+          - build-arm64
+          - build-armhf
+
 workflows:
   version: 2
   commit:
-    jobs:
-      - build-armhf
-      - build-arm64
-      - push-manifest:
-          requires:
-            - build-armhf
-            - build-arm64
-      # - build-amd64
+    <<: *build_jobs
   nightly:
-    jobs:
-      - build-armhf
-      - build-arm64
-      - push-manifest:
-          requires:
-            - build-armhf
-            - build-arm64
-      # - build-amd64
+    <<: *build_jobs
     triggers:
       - schedule:
           cron: "0 0 * * *"
@@ -35,10 +32,10 @@ shared: &shared
 
     - run:
         name: Install build dependencies.
-        command: sudo apt update && sudo apt install curl jq
+        command: sudo apt update -yq && sudo apt install curl jq -yq
 
     - run:
-        name: Add repo version to env.
+        name: Add dynamic shared vars to env.
         command: |
           echo 'export VERSION=$(curl -s https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name")' >> $BASH_ENV
           echo 'export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"' >> $BASH_ENV
@@ -49,8 +46,7 @@ shared: &shared
         name: Update Go version.
         command: |
           sudo rm -rf /usr/local/go
-          curl -O https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz
-          tar xzf go1.10.1.linux-amd64.tar.gz
+          curl -sL https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz | tar xz
           sudo mv go/ /usr/local
           go env && go version
 
@@ -58,7 +54,7 @@ shared: &shared
         name: Build binary.
         command: |
           mkdir -p $GOPATH/src/github.com/${IMAGE}
-          git clone https://github.com/${GITHUB_REPO} --depth=1 -b ${VERSION} $GOPATH/src/github.com/${GITHUB_REPO} &>/dev/null
+          git clone https://github.com/${GITHUB_REPO} --depth=1 $GOPATH/src/github.com/${GITHUB_REPO} &>/dev/null
           echo "Building repo: $GITHUB_REPO" && echo "Version: $VERSION" && echo "Architecture: $GOARCH"
           cd $GOPATH/src/github.com/${GITHUB_REPO}
           go get .
@@ -71,8 +67,12 @@ shared: &shared
           cd $GOPATH/src/github.com/${GITHUB_REPO}
           # ============
           # <qemu-support>
-          curl -sL "https://github.com/multiarch/qemu-user-static/releases/download/${QEMU_VERSION}/qemu-${QEMU_ARCH}-static.tar.gz" | tar xz
-          docker run --rm --privileged multiarch/qemu-user-static:register
+          if [ $GOARCH == 'amd64' ]; then
+            touch qemu-amd64-static
+          else
+            curl -sL "https://github.com/multiarch/qemu-user-static/releases/download/${QEMU_VERSION}/qemu-${QEMU_ARCH}-static.tar.gz" | tar xz
+            docker run --rm --privileged multiarch/qemu-user-static:register
+          fi
           # </qemu-support>
           # ============
 
@@ -83,7 +83,7 @@ shared: &shared
           echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
           # Push push push
           docker push ${IMAGE_ID}
-          if [ "${CIRCLE_BRANCH}" == 'master' ]; then
+          if [ $CIRCLE_BRANCH == 'master' ]; then
             docker tag  "${IMAGE_ID}" "${REGISTRY}/${IMAGE}:latest-${TAG}";
             docker push               "${REGISTRY}/${IMAGE}:latest-${TAG}";
           fi
@@ -101,6 +101,7 @@ jobs:
       GOARCH: amd64
       TAG: amd64
       TARGET: amd64
+      QEMU_ARCH: amd64
   build-arm64:
     <<: *shared
     environment:
@@ -138,15 +139,14 @@ jobs:
       - setup_remote_docker
 
       - run:
-          name: Determine repo version. Again.
+          name: Determine repo version.
           command: |
-            apk update && apk add curl jq
-            curl -s https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
+            apk add --no-cache curl jq
+            curl -sL https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
 
       - run:
           name: Install manifest-tool.
           command: |
-            export VERSION=$(cat ~/VERSION)
             echo "Downloading manifest-tool."
             wget https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64
             mv manifest-tool-linux-amd64 /usr/bin/manifest-tool
@@ -158,9 +158,15 @@ jobs:
           command: |
             export VERSION=$(cat ~/VERSION)
             echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
-            manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:$VERSION"
+            manifest-tool push from-args \
+              --platforms linux/arm,linux/arm64 \
+              --template "$REGISTRY/$IMAGE:$VERSION-ARCH" \
+              --target "$REGISTRY/$IMAGE:$VERSION"
             if [ "${CIRCLE_BRANCH}" == 'master' ]; then
-              manifest-tool push from-args --platforms linux/arm,linux/arm64 --template "$REGISTRY/$IMAGE:$VERSION-ARCH" --target "$REGISTRY/$IMAGE:latest"
+              manifest-tool push from-args \
+                --platforms linux/arm,linux/arm64 \
+                --template "$REGISTRY/$IMAGE:$VERSION-ARCH" \
+                --target "$REGISTRY/$IMAGE:latest"
             fi
 
       - run:
