@@ -54,11 +54,7 @@ shared: &shared
         name: Update Go version.
         command: |
           source $BASH_ENV
-          rm -rf /usr/local/go
-          curl -sL https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz | tar xz
-          mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
-          mv go/ /usr/local
-          go env && go version
+          .circleci/install_go.sh
 
     - run:
         name: Build binary.
