@@ -1,6 +1,12 @@
 #!/bin/sh
+set -euo pipefail
 
 export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"
+
+echo '====================================='
+env
+echo '====================================='
+
 cd $GOPATH/src/github.com/${GITHUB_REPO}
 # ============
 # <qemu-support>
@@ -19,8 +25,10 @@ docker build -t ${IMAGE_ID} --build-arg target=$TARGET --build-arg arch=$QEMU_AR
 # Login to Docker Hub.
 echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
 # Push push push
-docker push ${IMAGE_ID}
+echo "Pushing image: $IMAGE_ID"
+docker push "${IMAGE_ID}"
 if [ $CIRCLE_BRANCH == 'master' ]; then
+  echo "Pushing to latest."
   docker tag "${IMAGE_ID}" "${REGISTRY}/${IMAGE}:latest-${TAG}"
   docker push "${REGISTRY}/${IMAGE}:latest-${TAG}"
 fi

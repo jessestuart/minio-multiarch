@@ -1,10 +1,11 @@
 ARG target
-FROM $target/alpine
-
 ARG arch
+
+FROM golang:1.10.1-alpine3.7 as builder
+
 ENV ARCH=$arch
 
-COPY qemu-$ARCH-static* /usr/bin/
+COPY qemu-* /usr/bin/
 
 LABEL maintainer="Jesse Stuart <hi@jessestuart.com>"
 
@@ -30,6 +31,29 @@ RUN  \
      cd /go/src/github.com/minio/minio && \
      go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
      rm -rf /go/pkg /go/src /usr/local/go && apk del .build-deps
+
+FROM $target/alpine
+
+COPY qemu-* /usr/bin/
+
+ENV GOPATH /go
+ENV PATH $PATH:$GOPATH/bin
+ENV CGO_ENABLED 0
+ENV MINIO_UPDATE off
+ENV MINIO_ACCESS_KEY_FILE=access_key \
+    MINIO_SECRET_KEY_FILE=secret_key
+
+WORKDIR /go/src/github.com/minio/
+
+COPY dockerscripts/docker-entrypoint.sh \
+     dockerscripts/healthcheck.sh \
+     /usr/bin/
+
+COPY --from=builder /go/bin/* /usr/bin
+
+RUN \
+  apk add --no-cache ca-certificates curl && \
+  echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf
 
 EXPOSE 9000
 
