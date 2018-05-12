@@ -44,11 +44,6 @@ shared: &shared
           echo 'export VERSION=$(curl -s https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name")' >> $BASH_ENV
           echo 'export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"' >> $BASH_ENV
           echo 'export DIR=`pwd`' >> $BASH_ENV
-          echo 'export GOROOT=/usr/local/go' >> $BASH_ENV
-          echo 'export GOPATH=~/go' >> $BASH_ENV
-          echo 'export PATH="/usr/local/go/bin:$PATH"' >> $BASH_ENV
-          echo 'export PATH="~/go/bin:$PATH"' >> $BASH_ENV
-          source $BASH_ENV
 
     - run:
         name: Update Go version.
@@ -60,12 +55,7 @@ shared: &shared
         name: Build binary.
         command: |
           source $BASH_ENV
-          mkdir -p $GOPATH/src/github.com/${IMAGE}
-          git clone https://github.com/${GITHUB_REPO} --depth=1 $GOPATH/src/github.com/${GITHUB_REPO} &>/dev/null
-          echo "Building repo: $GITHUB_REPO" && echo "Version: $VERSION" && echo "Architecture: $GOARCH"
-          cd $GOPATH/src/github.com/${GITHUB_REPO}
-          go get .
-          make
+          .circleci/build-binary.sh
 
     - run:
         name: Build and push Docker image.
