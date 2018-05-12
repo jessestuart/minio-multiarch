@@ -1,5 +1,6 @@
 ARG target
 ARG arch
+ARG goarch
 
 FROM golang:1.10.1-alpine3.7 as builder
 
@@ -29,8 +30,7 @@ RUN  \
      apk add --no-cache --virtual .build-deps git && \
      echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
      cd /go/src/github.com/minio/minio && \
-     go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
-     rm -rf /go/pkg /go/src /usr/local/go && apk del .build-deps
+     GOOS=linux GOARCH=$goarch go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
 FROM $target/alpine
 
