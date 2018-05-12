@@ -26,13 +26,17 @@ workflows:
                 - master
 
 shared: &shared
-  machine: true
+  docker:
+    - image: docker:18-git
   steps:
     - checkout
 
+    - setup_remote_docker:
+        docker_layer_caching: true
+
     - run:
         name: Install build dependencies.
-        command: sudo apt update -yq && sudo apt install curl jq -yq
+        command: apk add --no-cache curl jq make bash perl git
 
     - run:
         name: Add dynamic shared vars to env.
@@ -40,19 +44,26 @@ shared: &shared
           echo 'export VERSION=$(curl -s https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name")' >> $BASH_ENV
           echo 'export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"' >> $BASH_ENV
           echo 'export DIR=`pwd`' >> $BASH_ENV
+          echo 'export GOROOT=/usr/local/go' >> $BASH_ENV
+          echo 'export GOPATH=~/go' >> $BASH_ENV
+          echo 'export PATH="/usr/local/go/bin:$PATH"' >> $BASH_ENV
+          echo 'export PATH="~/go/bin:$PATH"' >> $BASH_ENV
           source $BASH_ENV
 
     - run:
         name: Update Go version.
         command: |
-          sudo rm -rf /usr/local/go
+          source $BASH_ENV
+          rm -rf /usr/local/go
           curl -sL https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz | tar xz
-          sudo mv go/ /usr/local
+          mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+          mv go/ /usr/local
           go env && go version
 
     - run:
         name: Build binary.
         command: |
+          source $BASH_ENV
           mkdir -p $GOPATH/src/github.com/${IMAGE}
           git clone https://github.com/${GITHUB_REPO} --depth=1 $GOPATH/src/github.com/${GITHUB_REPO} &>/dev/null
           echo "Building repo: $GITHUB_REPO" && echo "Version: $VERSION" && echo "Architecture: $GOARCH"
@@ -63,6 +74,7 @@ shared: &shared
     - run:
         name: Build and push Docker image.
         command: |
+          source $BASH_ENV
           export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"
           cd $GOPATH/src/github.com/${GITHUB_REPO}
           # ============
