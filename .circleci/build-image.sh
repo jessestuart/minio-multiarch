@@ -1,7 +1,13 @@
 #!/bin/sh
 
+set -eu
+
 export IMAGE_ID="${REGISTRY}/${IMAGE}:${VERSION}-${TAG}"
-cd $GOPATH/src/github.com/${GITHUB_REPO}
+WORKDIR=$GOPATH/src/github.com/minio/minio
+mkdir -p $WORKDIR
+git clone https://github.com/minio/minio $WORKDIR
+cd $WORKDIR
+
 # ============
 # <qemu-support>
 if [ $GOARCH == 'amd64' ]; then
