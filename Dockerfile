@@ -18,6 +18,9 @@ RUN  \
 
 FROM $target/alpine:3.9
 
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
 LABEL \
   maintainer="Jesse Stuart <hi@jessestuart.com>" \
   org.label-schema.build-date=$BUILD_DATE \
