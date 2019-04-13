@@ -24,12 +24,9 @@ docker build -t ${IMAGE_ID} \
   --build-arg VERSION=$VERSION \
   .
 
-# docker build -t ${IMAGE_ID} \
-#   --build-arg target=$TARGET \
-#   --build-arg goarch=$GOARCH .
-
 # Login to Docker Hub.
 echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
+
 # Push push push
 docker push ${IMAGE_ID}
 if [ "$CIRCLE_BRANCH" = 'master' ]; then

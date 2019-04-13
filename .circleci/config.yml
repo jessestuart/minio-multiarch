@@ -79,15 +79,13 @@ jobs:
       - setup_remote_docker
 
       - run:
-          name: Load env vars.
-          command: sh .circleci/load_env.sh
-
-      - run:
-          name: Determine repo version.
+          name: Install build dependencies.
           command: |
             apk add --no-cache curl jq
-            source $BASH_ENV
-            # curl -sL https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
+
+      - run:
+          name: Load env vars.
+          command: sh .circleci/load_env.sh
 
       - run:
           name: Install manifest-tool.
@@ -102,7 +100,6 @@ jobs:
           name: Push Docker manifest.
           command: |
             source $BASH_ENV
-            # export VERSION=$(cat ~/VERSION)
             echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
             manifest-tool push from-args \
               --platforms linux/amd64,linux/arm,linux/arm64 \
@@ -119,5 +116,4 @@ jobs:
           name: Verify manifest was persisted remotely.
           command: |
             source $BASH_ENV
-            # export VERSION=$(cat ~/VERSION)
             manifest-tool inspect "$REGISTRY/$IMAGE:$VERSION"
