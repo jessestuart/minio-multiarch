@@ -43,18 +43,6 @@ shared: &shared
         command: |
           .circleci/load_env.sh
 
-    # - run:
-    #     name: Update Go version.
-    #     command: |
-    #       source $BASH_ENV
-    #       .circleci/install_go.sh
-
-    # - run:
-    #     name: Build binary.
-    #     command: |
-    #       source $BASH_ENV
-    #       .circleci/build-binary.sh
-
     - run:
         name: Build and push Docker image.
         command: |
@@ -65,63 +53,47 @@ jobs:
   build-amd64:
     <<: *shared
     environment:
-      # TODO (Consolidate these)
-      GITHUB_REPO: minio/minio
-      GOPATH: /home/circleci/go
-      GOROOT: /usr/local/go
-      IMAGE: minio
-      REGISTRY: jessestuart
       GOARCH: amd64
+      QEMU_ARCH: amd64
       TAG: amd64
       TARGET: amd64
-      QEMU_ARCH: amd64
   build-arm64:
     <<: *shared
     environment:
-      GITHUB_REPO: minio/minio
       GOARCH: arm64
-      GOPATH: /home/circleci/go
-      GOROOT: /usr/local/go
-      IMAGE: minio
       QEMU_ARCH: aarch64
-      QEMU_VERSION: v2.11.0
-      REGISTRY: jessestuart
       TAG: arm64
       TARGET: arm64v8
   build-armhf:
     <<: *shared
     environment:
-      GITHUB_REPO: minio/minio
       GOARCH: arm
-      GOPATH: /home/circleci/go
-      GOROOT: /usr/local/go
-      IMAGE: minio
       QEMU_ARCH: arm
-      QEMU_VERSION: v2.11.0
-      REGISTRY: jessestuart
       TAG: arm
       TARGET: arm32v6
   push-manifest:
     docker:
       - image: docker:18
-    environment:
-      GITHUB_REPO: minio/minio
-      IMAGE: minio
-      REGISTRY: jessestuart
     steps:
+      - checkout
       - setup_remote_docker
+
+      - run:
+          name: Load env vars.
+          command: sh .circleci/load_env.sh
 
       - run:
           name: Determine repo version.
           command: |
             apk add --no-cache curl jq
-            curl -sL https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
+            source $BASH_ENV
+            # curl -sL https://api.github.com/repos/${GITHUB_REPO}/releases/latest | jq -r ".tag_name" > ~/VERSION
 
       - run:
           name: Install manifest-tool.
           command: |
             echo "Downloading manifest-tool."
-            wget https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64
+            wget https://github.com/estesp/manifest-tool/releases/download/v1.0.0-rc2/manifest-tool-linux-amd64
             mv manifest-tool-linux-amd64 /usr/bin/manifest-tool
             chmod +x /usr/bin/manifest-tool
             manifest-tool --version
@@ -129,7 +101,8 @@ jobs:
       - run:
           name: Push Docker manifest.
           command: |
-            export VERSION=$(cat ~/VERSION)
+            source $BASH_ENV
+            # export VERSION=$(cat ~/VERSION)
             echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin;
             manifest-tool push from-args \
               --platforms linux/amd64,linux/arm,linux/arm64 \
@@ -145,5 +118,6 @@ jobs:
       - run:
           name: Verify manifest was persisted remotely.
           command: |
-            export VERSION=$(cat ~/VERSION)
+            source $BASH_ENV
+            # export VERSION=$(cat ~/VERSION)
             manifest-tool inspect "$REGISTRY/$IMAGE:$VERSION"
