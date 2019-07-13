@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * MinIO Cloud Storage, (C) 2019 MinIO, Inc.
  *
@@ -21,7 +23,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,7 +38,8 @@ const (
 	initGraceTime = 300
 	healthPath    = "/minio/health/live"
 	timeout       = time.Duration(30 * time.Second)
-	minioProcess  = "minio"
+	tcp           = "tcp"
+	anyIP         = ":::"
 )
 
 // returns container boot time by finding
@@ -67,11 +69,16 @@ func findEndpoint() (string, error) {
 	// split netstat output in rows
 	scanner := bufio.NewScanner(stdout)
 	scanner.Split(bufio.ScanLines)
-	// loop over the rows to find MinIO process
+	// MinIO works on TCP and it is supposed to be
+	// the only process listening on a port on any IP address
+	// (on :::) inside container.
+	// Since MinIO is running as non-root user, we can
+	// not depend on the PID/Program name column
+	// of netstat output
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), minioProcess) {
-			line := scanner.Text()
-			newLine := strings.Replace(line, ":::", "127.0.0.1:", 1)
+		line := scanner.Text()
+		if strings.Contains(line, tcp) && strings.Contains(line, anyIP) {
+			newLine := strings.Replace(line, anyIP, "127.0.0.1:", 1)
 			fields := strings.Fields(newLine)
 			// index 3 in the row has the Local address
 			// find the last index of ":" - address will
@@ -142,18 +149,10 @@ func main() {
 			// exit with success
 			os.Exit(0)
 		}
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			// Drain any response.
-			xhttp.DrainBody(resp.Body)
-			// GET failed exit
-			log.Fatalln(err)
-		}
-		bodyString := string(bodyBytes)
 		// Drain any response.
 		xhttp.DrainBody(resp.Body)
-		// This means sever is configured with https
-		if resp.StatusCode == http.StatusForbidden && bodyString == "SSL required" {
+		// 400 response may mean sever is configured with https
+		if resp.StatusCode == http.StatusBadRequest {
 			// Try with https
 			u.Scheme = "https"
 			resp, err = client.Get(u.String())
