@@ -13,17 +13,18 @@ Provides nightly builds of Minio server Docker images compatible with `arm64`,
 object storage server", with fabulous features like an S3-compliant API,
 excellent documentation, and other great features out-of-the-box:
 
-* Regularly updated Docker images -- for AMD64 only, unfortunately
+- Regularly updated Docker images — although the upstream provides builds for
+  AMD64 only, unfortunately.
 
-* An officially supported (in-tree) [Helm chart][minio-helm] for easy Kubernetes
+- An officially supported (in-tree) [Helm chart][minio-helm] for easy Kubernetes
   deployment.
 
-- A pretty dope CLI client, [mc][mc-github], for interfacing with not just Minio
+* A pretty dope CLI client, [mc][mc-github], for interfacing with not just Minio
   but any S3-compliant API. I've got a [multi-arch image][mc-link] for that too!
 
 However, there's currently no officially maintained Docker image compatible with
 architectures other than amd64. And while they provide cross-compiled binaries
-for ARM/ARM64, these releases often lag months behind the Darwin x86_64 or Linux
+for ARM/ARM64, these releases often lag months behind the Darwin or Linux
 AMD64 binaries.
 
 This repo triggers a nightly job on CircleCI to build Docker images for all
@@ -34,7 +35,7 @@ way to storage success.
 ### How can I use this?
 
 You can run the following command to stand up a standalone instance of Minio
-Server on Docker:
+Server on Docker: (replace `/export/minio`)
 
 ```bash
 docker run \
@@ -53,9 +54,10 @@ the [official docs][minio-k8s] on deploying Minio to Kubernetes for more detail,
 or check out the Minio [Helm chart][minio-helm] documentation.
 
 [circleci-badge]: https://circleci.com/gh/jessestuart/minio-multiarch/tree/master.svg?style=shield
-[circleci-link]: https://circleci.com/gh/jessestuart/minio-multiarch/tree/master
+[circleci-link]: https://circleci.com/gh/jessestuart/minio-multiarch/tree/master
 [dockerhub-badge]: https://img.shields.io/docker/pulls/jessestuart/minio.svg?style=flat-square
 [dockerhub-link]: https://hub.docker.com/r/jessestuart/minio/
+[mc-github]: https://github.com/minio/mc
 [mc-link]: https://github.com/jessestuart/mc-multiarch
 [microbadger-link]: https://github.com/jessestuart/minio-multiarch
 [microbadger]: https://images.microbadger.com/badges/image/jessestuart/minio.svg
