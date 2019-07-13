@@ -9,14 +9,16 @@ ENV GOPATH /go
 ENV CGO_ENABLED 0
 ENV GO111MODULE on
 
-RUN  \
-    apk add --no-cache git && \
-    git clone https://github.com/minio/minio && cd minio && \
-    go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
-    find /go/bin -name minio -exec cp -f {} /go/bin/minio \; && \
-    cd dockerscripts; go build -ldflags "-s -w" -o /usr/bin/healthcheck healthcheck.go
+RUN \
+  apk add --no-cache git && \
+  git clone https://github.com/minio/minio && cd minio && \
+  go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
+  find /go/bin -name minio -exec cp -f {} /go/bin/minio \; && \
+  cd dockerscripts && \
+  go build -tags kqueue -ldflags "-s -w" -o /usr/bin/healthcheck healthcheck.go && \
+  go build -tags kqueue -ldflags "-s -w" -o /usr/bin/check-user check-user.go
 
-FROM $target/alpine:3.9
+FROM $target/alpine:3.10
 
 ARG BUILD_DATE
 ARG VCS_REF
@@ -40,11 +42,12 @@ EXPOSE 9000
 
 COPY --from=0 /go/bin/minio /usr/bin/
 COPY --from=0 /usr/bin/healthcheck /usr/bin/healthcheck
+COPY --from=0 /usr/bin/check-user /usr/bin/check-user
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/
 
-RUN  \
-    apk add --no-cache ca-certificates 'curl>7.61.0' && \
-    echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf
+RUN \
+  apk add --no-cache ca-certificates 'curl>7.61.0' && \
+  echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf
 
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 
