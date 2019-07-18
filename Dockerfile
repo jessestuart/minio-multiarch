@@ -15,8 +15,7 @@ RUN \
   go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
   find /go/bin -name minio -exec cp -f {} /go/bin/minio \; && \
   cd dockerscripts && \
-  go build -tags kqueue -ldflags "-s -w" -o /usr/bin/healthcheck healthcheck.go && \
-  go build -tags kqueue -ldflags "-s -w" -o /usr/bin/check-user check-user.go
+  go build -tags kqueue -ldflags "-s -w" -o /usr/bin/healthcheck healthcheck.go
 
 FROM $target/alpine:3.10
 
@@ -42,7 +41,6 @@ EXPOSE 9000
 
 COPY --from=0 /go/bin/minio /usr/bin/
 COPY --from=0 /usr/bin/healthcheck /usr/bin/healthcheck
-COPY --from=0 /usr/bin/check-user /usr/bin/check-user
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/
 
 RUN \
