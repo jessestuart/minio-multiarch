@@ -9,16 +9,14 @@ ENV GOPATH /go
 ENV CGO_ENABLED 0
 ENV GO111MODULE on
 
+# COPY go.mod go.sum /tmp
+
 RUN  \
   apk add --no-cache git && \
   git clone https://github.com/minio/minio && cd minio && \
-  go build -o /go/bin/minio -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
-
-# RUN \
-#   apk add --no-cache git && \
-#   git clone https://github.com/minio/minio && cd minio && \
-#   go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
-#   find /go/bin -name minio -exec cp -f {} /go/bin/minio \;
+  go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
+  # cp /tmp/go.mod /tmp/go.sum ./ &&
+  # go build -o /go/bin/minio -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
 FROM $target/alpine:3.10
 
