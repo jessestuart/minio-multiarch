@@ -1,5 +1,5 @@
 ARG target
-FROM golang:1.12-alpine
+FROM golang:1.13-alpine
 
 ARG goarch
 ENV GOARCH $goarch
@@ -12,7 +12,8 @@ ENV GO111MODULE on
 RUN  \
   apk add --no-cache git && \
   git clone https://github.com/minio/minio && cd minio && \
-  go build -o /go/bin/minio -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
+  go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
+  find /go/bin -name minio -exec cp -f {} /go/bin/minio \;
 
 # RUN \
 #   apk add --no-cache git && \
