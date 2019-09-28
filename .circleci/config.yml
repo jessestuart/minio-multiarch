@@ -27,7 +27,7 @@ workflows:
 
 shared: &shared
   docker:
-    - image: docker:18-git
+    - image: docker:stable-git
   steps:
     - checkout
 
@@ -40,8 +40,7 @@ shared: &shared
 
     - run:
         name: Add dynamic shared vars to env.
-        command: |
-          .circleci/load_env.sh
+        command: .circleci/load_env.sh
 
     - run:
         name: Build and push Docker image.
@@ -73,7 +72,7 @@ jobs:
       TARGET: arm32v6
   push-manifest:
     docker:
-      - image: docker:18
+      - image: docker:stable-git
     steps:
       - checkout
       - setup_remote_docker
@@ -81,7 +80,7 @@ jobs:
       - run:
           name: Install build dependencies.
           command: |
-            apk add --no-cache curl jq
+            apk add --upgrade --no-cache curl jq
 
       - run:
           name: Load env vars.
