@@ -15,12 +15,6 @@ RUN  \
   go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
   find /go/bin -name minio -exec cp -f {} /go/bin/minio \;
 
-# RUN \
-#   apk add --no-cache git && \
-#   git clone https://github.com/minio/minio && cd minio && \
-#   go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
-#   find /go/bin -name minio -exec cp -f {} /go/bin/minio \;
-
 FROM $target/alpine:3.10
 
 ARG BUILD_DATE
