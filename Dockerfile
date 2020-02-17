@@ -11,11 +11,12 @@ ENV GO111MODULE on
 
 RUN  \
   apk add --no-cache git && \
-  git clone https://github.com/minio/minio && cd minio && \
+  git clone https://github.com/minio/minio && \
+  cd minio && \
   go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
   find /go/bin -name minio -exec cp -f {} /go/bin/minio \;
 
-FROM $target/alpine:3.10
+FROM $target/alpine:3.11
 
 ARG BUILD_DATE
 ARG VCS_REF
